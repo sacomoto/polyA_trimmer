@@ -32,7 +32,9 @@
 #include <zlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "kseq.h"
+#define MAX 1000
 KSEQ_INIT(gzFile, gzread)
 
 int trimm_end(char *seq, int size, int min_length, int max_error, char base)
@@ -76,15 +78,40 @@ void print_substr(FILE *stream, char *seq, int begin, int end)
 
 int main(int argc, char **argv)
 {
-  if (argc < 6) 
-  {
-    fprintf(stderr, "Usage: %s <in.fastq> <out.fastq> min_length max_error min_read_length\n", argv[0]);
-    return 1;
-  }
-  int error_code, total_trimmed_bases = 0, min_length = atoi(argv[3]), max_error = atoi(argv[4]), min_read_length = atoi(argv[5]);
+  int c;
 
-  FILE *out = fopen(argv[2], "w");
-  gzFile fp = gzopen(argv[1], "r"); 
+  char *input_fname, *output_fname;
+  int error_code, total_trimmed_bases = 0, min_length = 10, max_error = 3, min_read_length = 40;
+
+  while ((c = getopt(argc, argv, "i:o:")) != -1)
+  {
+    switch (c)
+    {
+       case 'i':
+	 input_fname = optarg;
+	 printf("%s\n", input_fname);
+	 break;
+       case 'o':
+	 output_fname = optarg;
+	 printf("%s\n", output_fname);
+	 break;	 
+    }
+  }
+  
+  FILE *out = fopen(output_fname, "w");
+  if (out == NULL)
+  {
+    fprintf(stderr, "Problem opening: %s\n", output_fname);
+    return 0;
+  }  
+
+  gzFile fp = gzopen(input_fname, "r"); 
+  if (fp == NULL)
+  {
+    fprintf(stderr, "Problem opening: %s\n", input_fname);
+    return 0;
+  }  
+
   kseq_t *seq = kseq_init(fp); 
   while ((error_code = kseq_read(seq)) >= 0) 
   { 
