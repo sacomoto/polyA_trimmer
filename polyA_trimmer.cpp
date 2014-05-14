@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include "kseq.h"
 #define MAX 1000
+#define IS_FASTQ(seq) (seq->qual.s != NULL)
 KSEQ_INIT(gzFile, gzread)
 
 int trimm_end(char *seq, int size, int min_length, int max_error, char base)
@@ -126,7 +127,7 @@ int main(int argc, char **argv)
       
     }
   }
-  if (fp == NULL)
+  if (fp == NULL || out == NULL)
     print_usage_and_exit(argv[0]);
    
   kseq_t *seq = kseq_init(fp); 
@@ -144,10 +145,13 @@ int main(int argc, char **argv)
 
     if ((end - begin) >= min_read_length)
     {  
-      fprintf(out, "@%s\n", seq->name.s);
+      fprintf(out, "%c%s\n", IS_FASTQ(seq) ? '@' : '>', seq->name.s);
       print_substr(out, seq->seq.s, begin, end);
-      fprintf(out, "+%s\n", seq->name.s);
-      print_substr(out, seq->qual.s, begin, end);
+      if (IS_FASTQ(seq))
+      {
+	fprintf(out, "+%s\n", seq->name.s);
+	print_substr(out, seq->qual.s, begin, end);
+      }
       total_trimmed_bases += (size - (end-begin));
     }
     else
