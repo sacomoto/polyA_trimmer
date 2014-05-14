@@ -76,42 +76,59 @@ void print_substr(FILE *stream, char *seq, int begin, int end)
   fprintf(stream, "\n");
 }
 
+void print_usage_and_exit(char *name)
+{
+  fprintf(stderr, "\nusage: %s [-i input file fasta/q] [-o output file] [-l min length (20)] [-e max error (3)] [-m min read length (40)] \n", name);
+  exit(0);
+}
+
 int main(int argc, char **argv)
 {
-  int c;
-
   char *input_fname, *output_fname;
-  int error_code, total_trimmed_bases = 0, min_length = 10, max_error = 3, min_read_length = 40;
+  int error_code, total_trimmed_bases = 0, min_length = 20, max_error = 3, min_read_length = 40;
+ 
+  gzFile fp = NULL;
+  FILE *out = NULL;
 
-  while ((c = getopt(argc, argv, "i:o:")) != -1)
+  int c;
+  while ((c = getopt(argc, argv, "i:o:l:e:")) != -1)
   {
     switch (c)
     {
        case 'i':
-	 input_fname = optarg;
-	 printf("%s\n", input_fname);
+	 fp = gzopen(optarg, "r"); 
+	 if (fp == NULL)
+	 {
+	   fprintf(stderr, "Problem opening: %s\n", optarg);
+	   exit(0);
+	 }  
 	 break;
+
        case 'o':
-	 output_fname = optarg;
-	 printf("%s\n", output_fname);
+	 out = fopen(optarg, "w");
+	 if (out == NULL)
+	 {
+	   fprintf(stderr, "Problem opening: %s\n", optarg);
+	   exit(0);
+	 }  
 	 break;	 
+	 
+      case 'l':
+	min_length = atoi(optarg);
+	break;
+	
+      case 'e':
+	max_error = atoi(optarg);
+	break;
+	
+      default:
+	print_usage_and_exit(argv[0]);
+      
     }
   }
-  
-  FILE *out = fopen(output_fname, "w");
-  if (out == NULL)
-  {
-    fprintf(stderr, "Problem opening: %s\n", output_fname);
-    return 0;
-  }  
-
-  gzFile fp = gzopen(input_fname, "r"); 
   if (fp == NULL)
-  {
-    fprintf(stderr, "Problem opening: %s\n", input_fname);
-    return 0;
-  }  
-
+    print_usage_and_exit(argv[0]);
+   
   kseq_t *seq = kseq_init(fp); 
   while ((error_code = kseq_read(seq)) >= 0) 
   { 
